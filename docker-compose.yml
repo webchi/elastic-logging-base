@@ -1,0 +1,43 @@
+services:
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.5.4
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+    volumes:
+      - ./elastic:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+      - 9300:9300
+    networks: ['stack']      
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:6.5.4
+    container_name: kibana
+    environment:
+        SERVER_NAME: localhost 
+    ports: 
+      - 5601:5601
+    depends_on: ['elasticsearch']     
+    networks: ['stack']     
+
+  filebelt:
+    user: root
+    image: docker.elastic.co/beats/filebeat:6.5.4
+    container_name: filebelt
+    command: --strict.perms=false -e
+    environment:
+      - setup.kibana.host=kibana:5601
+      - output.elasticsearch.hosts=["elasticsearch:9200"]
+    volumes:
+      - ./filebeat/filebeat.docker.yml:/usr/share/filebeat/filebeat.yml:ro      
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on: ['elasticsearch', 'kibana']
+    networks: ['stack']    
+    restart: on-failure
+
+version: '2.2'
+
+networks: {stack: {}}
